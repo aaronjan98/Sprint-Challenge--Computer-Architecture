@@ -12,7 +12,7 @@ class CPU:
         self.ram = [i * 0 for i in range(256)]
         self.pc = 0
         self.SP = 7
-        self.FL = 0
+        self.FL = 0b00000000
 
         self.branchtable = {
             0b10000010: self.LDI,
@@ -26,7 +26,8 @@ class CPU:
             0b00010001: self.RET,
             0b10100111: self.CMP,
             0b01010100: self.JMP,
-            0b01010101: self.JEQ
+            0b01010101: self.JEQ,
+            0b01010110: self.JNE
         }
         
     def LDI(self, *args):
@@ -54,18 +55,29 @@ class CPU:
         return False
     
     def JMP(self, *args):
-        print('JUMP!')
         # Jump to the address stored in the given register.
         address = self.reg[args[0]]
         # Set the PC to the address stored in the given register.
-        self.PC = address
+        self.pc = address
     
     def JEQ(self, *args):
         # If equal flag is set (true), 
-        if self.FL:
+        if self.FL == 0b00000001:
+            # jump to the address stored in the given register.
+            # Set the PC to the address stored in the given register.
+            self.pc = self.reg[args[0]]
+        else:
+            self.pc += args[2]
+    
+    def JNE(self, *args):
+        # If E flag is clear (false, 0)
+        if bin(self.FL) != bin(0b00000001):
             # jump to the address stored in the given register.
             address = self.reg[args[0]]
+            # Set the PC to the address stored in the given register.
             self.pc = address
+        else:
+            self.pc += args[2]
     
     def PUSH(self, *args):
 		# decrement SP
@@ -148,23 +160,21 @@ class CPU:
             self.reg[reg_a] += self.reg[reg_b]
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        # Compare the values in two registers.
         elif op == "CMP":
-            print('CMP:', bin(self.reg[reg_a]), bin(self.reg[reg_b]))
-            # L Less-than: set to 1 if registerA is less than registerB, zero otherwise.
-            if self.reg[reg_a] < self.reg[reg_b]:
-                self.FL = 1
-                print('less')
-            # G Greater-than: set to 1 if registerA is greater than registerB, zero otherwise.
+            # If they are equal, set the Equal E flag to 1
+            if self.reg[reg_a] == self.reg[reg_b]:
+                self.FL = 0b00000001
+            # If registerA is less than registerB, set the Less-than L flag to 1
+            elif self.reg[reg_a] < self.reg[reg_b]:
+                # L Less-than: during a CMP, set to 1 if registerA is less than registerB.
+                self.FL = 0b00000100
+            # If registerA is greater than registerB, set the Greater-than G flag to 1
             elif self.reg[reg_a] > self.reg[reg_b]:
-                self.FL = 1
-                print('greater')
-            # E Equal: set to 1 if registerA is equal to registerB, zero otherwise.
-            elif self.reg[reg_a] == self.reg[reg_b]:
-                self.FL = 1
-                print('equal')
+                # G Greater-than: during a CMP, set to 1 if registerA is greater than registerB.
+                self.FL = 0b00000010
             else:
-                self.FL = 0
-                print('else')
+                self.FL = 0b00000000
         else:
             raise Exception("Unsupported ALU operation")
 
@@ -176,7 +186,7 @@ class CPU:
 
         print(f"TRACE: %02X | %02X %02X %02X |" % (
             self.pc,
-            #self.fl,
+            # self.FL,
             #self.ie,
             self.ram_read(self.pc),
             self.ram_read(self.pc + 1),
@@ -200,6 +210,7 @@ class CPU:
         """Run the CPU."""
         # read the memory address that's stored in register PC, and store that result in the Instruction Register. 
         running = True
+        # self.trace()
 
         while running:
             ir = self.ram_read(self.pc)
