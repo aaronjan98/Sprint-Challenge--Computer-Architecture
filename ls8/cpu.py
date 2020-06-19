@@ -25,7 +25,8 @@ class CPU:
             0b01010000: self.CALL,
             0b00010001: self.RET,
             0b10100111: self.CMP,
-            0b01010100: self.JMP
+            0b01010100: self.JMP,
+            0b01010101: self.JEQ
         }
         
     def LDI(self, *args):
@@ -58,6 +59,13 @@ class CPU:
         address = self.reg[args[0]]
         # Set the PC to the address stored in the given register.
         self.PC = address
+    
+    def JEQ(self, *args):
+        # If equal flag is set (true), 
+        if self.FL:
+            # jump to the address stored in the given register.
+            address = self.reg[args[0]]
+            self.pc = address
     
     def PUSH(self, *args):
 		# decrement SP
