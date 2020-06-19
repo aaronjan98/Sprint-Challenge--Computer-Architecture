@@ -12,6 +12,7 @@ class CPU:
         self.ram = [i * 0 for i in range(256)]
         self.pc = 0
         self.SP = 7
+        self.FL = 0
 
         self.branchtable = {
             0b10000010: self.LDI,
@@ -22,7 +23,9 @@ class CPU:
             0b01000101: self.PUSH,
             0b01000110: self.POP,
             0b01010000: self.CALL,
-            0b00010001: self.RET # 00010001
+            0b00010001: self.RET,
+            0b10100111: self.CMP,
+            0b01010100: self.JMP
         }
         
     def LDI(self, *args):
@@ -41,9 +44,20 @@ class CPU:
         self.alu('ADD', args[0], args[1])
         self.pc += args[2]
     
+    def CMP(self, *args):
+        self.alu('CMP', args[0], args[1])
+        self.pc += args[2]
+    
     def HLT(self, *args):
         self.pc += args[2]
         return False
+    
+    def JMP(self, *args):
+        print('JUMP!')
+        # Jump to the address stored in the given register.
+        address = self.reg[args[0]]
+        # Set the PC to the address stored in the given register.
+        self.PC = address
     
     def PUSH(self, *args):
 		# decrement SP
@@ -93,7 +107,7 @@ class CPU:
         address = self.reg[self.SP]
         self.pc = self.ram[address]
         self.reg[self.SP] += 1
-
+    
     def load(self):
         """Load a program into memory."""
         filename = sys.argv[1]
@@ -124,9 +138,25 @@ class CPU:
 
         if op == "ADD":
             self.reg[reg_a] += self.reg[reg_b]
-        #elif op == "SUB": etc
         elif op == "MUL":
             self.reg[reg_a] *= self.reg[reg_b]
+        elif op == "CMP":
+            print('CMP:', bin(self.reg[reg_a]), bin(self.reg[reg_b]))
+            # L Less-than: set to 1 if registerA is less than registerB, zero otherwise.
+            if self.reg[reg_a] < self.reg[reg_b]:
+                self.FL = 1
+                print('less')
+            # G Greater-than: set to 1 if registerA is greater than registerB, zero otherwise.
+            elif self.reg[reg_a] > self.reg[reg_b]:
+                self.FL = 1
+                print('greater')
+            # E Equal: set to 1 if registerA is equal to registerB, zero otherwise.
+            elif self.reg[reg_a] == self.reg[reg_b]:
+                self.FL = 1
+                print('equal')
+            else:
+                self.FL = 0
+                print('else')
         else:
             raise Exception("Unsupported ALU operation")
 
